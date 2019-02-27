@@ -13,9 +13,8 @@ class Board:
         else:
             self.board = board
         self.setup()
-        self.kx, self.ky = (5,5) # King pos
-        self.dScore = self.aScore = 24
-        self.boardCode = np.zeros((11,11))
+        self.kx, self.ky = (4,4) # King pos
+        self.boardCode = np.zeros((9,9))
         for piece in self.board:
             if self.board[piece].color == DEF:
                 self.boardCode[piece] = 1
@@ -23,44 +22,41 @@ class Board:
                 self.boardCode[piece] = 2
             elif self.board[piece].color == KNG:
                 self.boardCode[piece] = 3
-        self.boardCode = np.reshape(self.boardCode, (121))
+        self.boardCode = np.reshape(self.boardCode, (81))
         self.boardCode = np.append(self.boardCode, 100 if self.turn == ATC else -100)
         self.moves = 0
         self.c2n, self.n2c = self.genDict()
 
     def setup(self):
-        self.board[(5, 1)] = Atc(ATC, uniDict[ATC], (5, 1))
-        self.board[(1, 5)] = Atc(ATC, uniDict[ATC], (1, 5))
-        self.board[(9, 5)] = Atc(ATC, uniDict[ATC], (9, 5))
-        self.board[(5, 9)] = Atc(ATC, uniDict[ATC], (5, 9))
-        for i in range(3,8):
+        self.board[(4, 1)] = Atc(ATC, uniDict[ATC], (4, 1))
+        self.board[(1, 4)] = Atc(ATC, uniDict[ATC], (1, 4))
+        self.board[(7, 4)] = Atc(ATC, uniDict[ATC], (7, 4))
+        self.board[(4, 7)] = Atc(ATC, uniDict[ATC], (4, 7))
+        for i in range(3,6):
             self.board[(i,0)] =  Atc(ATC, uniDict[ATC], (i,0))
             self.board[(0,i)] =  Atc(ATC, uniDict[ATC], (0,i))
-            self.board[(10,i)] =  Atc(ATC, uniDict[ATC], (10,i))
-            self.board[(i,10)] = Atc(ATC, uniDict[ATC], (i,10))
-        self.board[(3,5)] = Def(DEF, uniDict[DEF], (3,5))
-        self.board[(5,3)] = Def(DEF, uniDict[DEF], (5,3))
-        self.board[(7,5)] = Def(DEF, uniDict[DEF], (7,5))
-        self.board[(5,7)] = Def(DEF, uniDict[DEF], (5,7))
+            self.board[(8,i)] =  Atc(ATC, uniDict[ATC], (8,i))
+            self.board[(i,8)] = Atc(ATC, uniDict[ATC], (i,8))
 
-        for i in range(4,7):
-            for j in range(4,7):
-                self.board[(i,j)] = Def(DEF, uniDict[DEF], (i,j))
-        self.board[(5,5)] = Kng(KNG, uniDict[KNG], (5,5))
+        for i in range(2,7):
+            for j in range(2,7):
+                if i == 4 or j == 4:
+                    self.board[(i,j)] = Def(DEF, uniDict[DEF], (i, j))
+        self.board[(4,4)] = Kng(KNG, uniDict[KNG], (5,5))
 
     def printBoard(self):
-        print("    0| 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |10")
-        for i in range(0,11):
-            print("-"*48)
+        print("    0| 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 ")
+        for i in range(0,9):
+            print("-"*38)
             if i < 10:
                 print(str(i)+" ",end="|")
             else:
                 print(i, end="|")
-            for j in range(0,11):
+            for j in range(0,9):
                 item = self.board.get((i,j)," ")
                 print(str(item)+' |', end = " ")
             print()
-        print("-"*48)
+        print("-"*38)
         print("------------ {} TO MOVE -----------".format(self.turn))
 
     def parseInput(self):
@@ -81,8 +77,8 @@ class Board:
         nr = 0
         num2coord = {}
         coord2num = {}
-        for i in range(11):
-            for j in range(11):
+        for i in range(9):
+            for j in range(9):
                 num2coord[nr] = (i,j)
                 coord2num[(i,j)] = nr
                 nr += 1
@@ -105,7 +101,7 @@ class Board:
             self.board.get((self.kx - 1, self.ky), None) or (self.kx - 1, self.ky)
         ]
         if (self.kx, self.ky) in [(0,0), (10,0), (0, 10), (10, 10)]:
-            print('-------------- Rege salvat ---------')
+            print('\033[93m-------------- Rege salvat ---------\033[0m')
             self.printBoard()
             return True
 
@@ -113,7 +109,7 @@ class Board:
             (self.kx, self.ky - 1) == ATC and\
             (self.kx, self.ky + 1)== ATC and\
             (self.kx - 1, self.ky) == ATC:
-                print("------------ am pierdut regele -----------")
+                print("\033[93m------------ am pierdut regele -----------\033[0m")
                 self.printBoard()
                 return True
         return False
@@ -142,7 +138,7 @@ class Board:
                     else:
                         dead = False
             if dead:
-                print("You killed enemy's unit on " + str(piece))
+                print('\033[92m' + "{} killed enemy's unit on ".format(self.turn ) + str(piece) + '\033[0m')
                 del self.board[piece]
                 self.printBoard()
                 r += 50
@@ -153,8 +149,10 @@ class Board:
         #print(self.message)
 
         r = 0
-        if self.isPiece(fr):
-            r+= 2
+
+        if fr == to:
+            return self.gameOver(), self.boardCode, -2
+
         if fr:
             fr = (round(fr[0]), round(fr[1]))
             to = (round(to[0]), round(to[1]))
@@ -164,7 +162,7 @@ class Board:
             target = self.board.get((fr[0], fr[1]), None)
         except:
             self.message = 'Nu se afla nimic pe pozitia aleasa / in afara tablei'
-            r -= 25
+            r -= 1
             target = None
 
         if target:
@@ -172,16 +170,16 @@ class Board:
                 target.color == DEF and self.turn == ATC or\
                 target.color == KNG and self.turn == ATC:
                 self.message = "you aren't allowed to move that piece this turn"
-                return self.gameOver(), self.boardCode, -25
+                return self.gameOver(), self.boardCode, -2
             if target.isValid(fr, to, target.color, self.board):
                 self.message = "that is a valid move"
-                r += 10
+                r += 1
                 self.board[to] = self.board[fr]
                 self.board[to].pos = to
 
                 if target.color == KNG:
                     self.kx, self.ky = target.pos
-                    r += 5
+                    r += 2
                 #print(self.boardCode)
                 del self.board[fr]
                 if self.turn == DEF:
@@ -192,10 +190,10 @@ class Board:
                     self.boardCode[-1] = -100
                 if pr:
                     self.moves += 1
-                    print('MOVES {}: '.format((fr,to)), self.moves)
+                    print('\033[92m' + 'MOVES {}: \033[0m'.format((fr,to)), self.moves)
                     self.printBoard()
 
-                self.boardCode = np.zeros((11, 11))
+                self.boardCode = np.zeros((9, 9))
                 for piece in self.board:
                     if self.board[piece].color == DEF:
                         self.boardCode[piece] = 1
@@ -203,19 +201,19 @@ class Board:
                         self.boardCode[piece] = 2
                     elif self.board[piece].color == KNG:
                         self.boardCode[piece] = 3
-                self.boardCode = np.reshape(self.boardCode, (121))
+                self.boardCode = np.reshape(self.boardCode, (81))
                 self.boardCode = np.append(self.boardCode, 100 if self.turn == ATC else -100)
                 #print(self.boardCode)
 
             else:
                 self.message = "invalid move" + str(target.avMoves(fr[0], fr[1], self.board))
-                return self.gameOver(), self.boardCode, -25
+                return self.gameOver(), self.boardCode, -2
         else:
             self.message = "there is no piece in that space"
-            r -= 25
+            r -= 1
         r += self.checkTakes()
         if self.gameOver():
-            r += 1000
+            r += 100
         return self.gameOver(), self.boardCode, r
 
     def randomMove(self):
