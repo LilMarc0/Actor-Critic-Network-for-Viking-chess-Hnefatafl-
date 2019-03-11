@@ -1,0 +1,2 @@
+model_checkpoint_path: "actorF.ckpt"
+all_model_checkpoint_paths: "actorF.ckpt"
