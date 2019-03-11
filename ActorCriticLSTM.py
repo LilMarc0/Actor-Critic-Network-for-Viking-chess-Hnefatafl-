@@ -1,4 +1,3 @@
-
 import random
 import numpy as np
 import pickle
@@ -7,6 +6,7 @@ from collections import deque
 
 import tflearn
 import tensorflow as tf
+
 
 class ReplayBuffer(object):
     def __init__(self, buffer_size):
@@ -30,6 +30,9 @@ class ReplayBuffer(object):
     def load(self, path):
         self.buffer = pickle.load(open(path, "rb"))
         print('\033[92m' + 'Buffer found with {} data points \033[0m'.format(len(self.buffer)))
+        # if len(self.buffer) > self.buffer_size:
+        #     print('Trimming to {}'.format(self.buffer_size))
+        #     self.buffer = self.buffer[:-self.buffer_size]
 
     def size(self):
         return self.count
@@ -61,6 +64,7 @@ class ReplayBuffer(object):
         self.buffer.clear()
         self.count = 0
 
+
 class ActorNetwork(object):
 
     def __init__(self, sess, state_dim, action_dim, action_bound, learning_rate, tau, batch_size):
@@ -80,8 +84,7 @@ class ActorNetwork(object):
         self.target_inputs, self.target_out, self.target_scaled_out = self.create_actor_network()
 
         self.target_network_params = tf.trainable_variables()[
-            len(self.network_params):]
-
+                                     len(self.network_params):]
 
         # Op for periodically updating target network with online network weights
         self.update_target_network_params = \
@@ -106,7 +109,7 @@ class ActorNetwork(object):
             self.network_params) + len(self.target_network_params)
 
     def create_actor_network(self):
-        inputs = tflearn.input_data(shape= [None, 5, 82])
+        inputs = tflearn.input_data(shape=[None, 5, 82])
         net = tflearn.lstm(inputs, 256, return_seq=True)
         net = tflearn.dropout(net, 0.6)
         net = tflearn.activations.relu(net)
@@ -151,6 +154,7 @@ class ActorNetwork(object):
         print('Restoring actor...')
         res_path = self.saver.restore(self.sess, "./actorLSTM/actorLSTM.ckpt")
         print('Actor restored...')
+
 
 class CriticNetwork(object):
 
@@ -203,7 +207,7 @@ class CriticNetwork(object):
         t2 = tflearn.fully_connected(action, 600)
 
         net = tflearn.activation(
-             tf.matmul(net, t1.W) + tf.matmul(action, t2.W) + t2.b, activation='relu')
+            tf.matmul(net, t1.W) + tf.matmul(action, t2.W) + t2.b, activation='relu')
 
         # linear layer connected to 1 output representing Q(s,a)
         # Weights are init to Uniform[-3e-3, 3e-3]
@@ -259,7 +263,7 @@ class OrnsteinUhlenbeckActionNoise:
 
     def __call__(self):
         x = self.x_prev + self.theta * (self.mu - self.x_prev) * self.dt + \
-                self.sigma * np.sqrt(self.dt) * np.random.normal(size=self.mu.shape)
+            self.sigma * np.sqrt(self.dt) * np.random.normal(size=self.mu.shape)
         self.x_prev = x
         return x
 

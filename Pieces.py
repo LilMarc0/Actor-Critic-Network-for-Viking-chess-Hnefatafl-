@@ -6,7 +6,7 @@ uniDict = {DEF : "D", ATC : "A", KNG: "K"}
 
 
 def isBound(x, y):
-    if x >= 0 and x < 9 and y >= 0 and y < 9:
+    if x >= 0 and x < 7 and y >= 0 and y < 7:
         return True
     return False
 
