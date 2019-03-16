@@ -151,11 +151,12 @@ class atkActorNetwork(object):
 
     def save(self):
         print('Saving actor...')
-        save_path = self.saver.save(self.sess, 'AdversarialNets/Aactor/Aactor.ckpt')
+        self.saver.save(self.sess, 'AdversarialNets/Aactor/Aactor.ckpt')
 
     def load(self):
         print('Restoring actor...')
-        res_path = self.saver.restore(self.sess, 'AdversarialNets/Aactor/Aactor.ckpt')
+        imported_meta = tf.train.import_meta_graph('.\\AdversarialNets\\Aactor\\Aactor.ckpt.meta')
+        imported_meta.restore(self.sess, tf.train.latest_checkpoint('.\\AdversarialNets\\Aactor\\'))
         print('Actor restored...')
 
 class atkCriticNetwork(object):
@@ -195,7 +196,8 @@ class atkCriticNetwork(object):
         self.action_grads = tf.gradients(self.out, self.action)
 
         # DE FACUT
-
+    
+    
     def create_Acritic_network(self):
         with tf.variable_scope('ATK'):
             with tf.variable_scope('inputs2'):
@@ -256,11 +258,12 @@ class atkCriticNetwork(object):
 
     def save(self):
         print('saving critic..')
-        save_path = self.saver.save(self.sess, 'AdversarialNets/Acritic/Acritic.ckpt')
+        save_path = self.saver.save(self.sess, 'AdversarialNets\\Acritic\\Acritic.ckpt')
 
     def load(self):
         print('Restoring critic...')
-        self.saver.restore(self.sess, 'AdversarialNets/Acritic/Acritic.ckpt')
+        imported_meta = tf.train.import_meta_graph('.\\AdversarialNets\\Acritic\\Acritic.ckpt.meta')
+        imported_meta.restore(self.sess, tf.train.latest_checkpoint('.\\AdversarialNets\\Acritic\\'))
         print('Critic restored...')
 
 
