@@ -84,7 +84,7 @@ class atkActorNetwork(object):
                  for i in range(len(self.target_network_params))]
         # This gradient will be provided by the critic network
         with tf.variable_scope('actor_grads'):
-            self.action_gradient = tf.placeholder(tf.float32, [None, self.action_dim])
+            self.action_gradient = tf.placeholder(tf.float32, [None, 588])
             # Combine the gradients, dividing by the batch size to
             # account for the fact that the gradients are summed over the
             # batch by tf.gradients
@@ -103,7 +103,7 @@ class atkActorNetwork(object):
     def create_Aactor_network(self):
         with tf.variable_scope('ATK'):
             with tf.variable_scope('Ainputs1'):
-                inputs = tflearn.input_data(shape=self.s_dim)
+                inputs = tflearn.input_data(shape=[None, 5, 7, 7])
             with tf.variable_scope('Aconv1'):
                 conv = conv_2d(inputs, nb_filter=9, filter_size=3, strides=1, reuse=tf.AUTO_REUSE, scope='DatkConv', trainable=True)
                 # print(conv.get_shape().as_list())    ---> [None, 5, 7, 9], 5*7*9 = 315
@@ -122,7 +122,7 @@ class atkActorNetwork(object):
                 # Final layer weights are init to Uniform[-3e-3, 3e-3]
                 w_init = tflearn.initializations.uniform(minval=-0.003, maxval=0.003)
                 out = tflearn.fully_connected(
-                    net, self.action_dim, activation='sigmoid', weights_init=w_init, reuse=tf.AUTO_REUSE, scope='DatkOut')
+                    net, 588, activation='sigmoid', weights_init=w_init, reuse=tf.AUTO_REUSE, scope='DatkOut')
                 # Scale output to -action_bound to action_bound
                 scaled_out = tf.multiply(out, self.action_bound)
         return inputs, out, scaled_out
@@ -199,8 +199,8 @@ class atkCriticNetwork(object):
     def create_Acritic_network(self):
         with tf.variable_scope('ATK'):
             with tf.variable_scope('inputs2'):
-                inputs = tflearn.input_data(shape=self.s_dim)
-                action = tflearn.input_data(shape=[None, self.action_dim])
+                inputs = tflearn.input_data(shape=[None, 5, 7, 7])
+                action = tflearn.input_data(shape=[None, 588])
             with tf.variable_scope('conv2'):
                 conv = conv_2d(inputs, nb_filter=9, filter_size=3, strides=1, reuse=tf.AUTO_REUSE, scope='atk', name='CatkConv')
                 conv = tflearn.reshape(conv, [-1, 5, 63])

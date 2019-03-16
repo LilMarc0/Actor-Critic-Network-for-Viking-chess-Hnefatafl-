@@ -85,7 +85,7 @@ class defActorNetwork(object):
 
 
         # This gradient will be provided by the critic network
-        self.action_gradient = tf.placeholder(tf.float32, [None, self.action_dim])
+        self.action_gradient = tf.placeholder(tf.float32, [None, 588])
 
         # Combine the gradients, dividing by the batch size to
         # account for the fact that the gradients are summed over the
@@ -102,7 +102,7 @@ class defActorNetwork(object):
     def create_Dactor_network(self):
         with tf.variable_scope('DEF'):
             with tf.variable_scope('Dinputs1'):
-                inputs = tflearn.input_data(shape=self.s_dim)
+                inputs = tflearn.input_data(shape=[None, 5, 7, 7])
             with tf.variable_scope('Dconv1'):
                 conv = conv_2d(inputs, nb_filter=9, filter_size=3, strides=1, reuse=tf.AUTO_REUSE, scope='def', trainable=True)
                 # print(conv.get_shape().as_list())    ---> [None, 5, 7, 9], 5*7*9 = 315
@@ -119,7 +119,7 @@ class defActorNetwork(object):
                 w_init = tflearn.initializations.uniform(minval=-0.003, maxval=0.003)
             with tf.variable_scope('out'):
                 out = tflearn.fully_connected(
-                    net, self.action_dim, activation='sigmoid', weights_init=w_init, reuse=tf.AUTO_REUSE, scope='def')
+                    net, 588, activation='sigmoid', weights_init=w_init, reuse=tf.AUTO_REUSE, scope='def')
                 # Scale output to -action_bound to action_bound
                 scaled_out = tf.multiply(out, self.action_bound)
         return inputs, out, scaled_out
@@ -196,8 +196,8 @@ class defCriticNetwork(object):
     def create_Dcritic_network(self):
         with tf.variable_scope('DEF'):
             with tf.variable_scope('inputs2'):
-                inputs = tflearn.input_data(shape=self.s_dim)
-                action = tflearn.input_data(shape=[None, self.action_dim])
+                inputs = tflearn.input_data(shape=[None, 5, 7, 7])
+                action = tflearn.input_data(shape=[None, 588])
             with tf.variable_scope('conv2'):
                 conv = conv_2d(inputs, nb_filter=9, filter_size=3, strides=1, reuse=tf.AUTO_REUSE, scope='def')
                 conv = tflearn.reshape(conv, [-1, 5, 63])

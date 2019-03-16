@@ -148,11 +148,12 @@ class defActorNetwork(object):
 
     def save(self):
         print('Saving actor...')
-        save_path = self.saver.save(self.sess, 'AdversarialNets/Dactor/Dactor.ckpt')
+        self.saver.save(self.sess, 'AdversarialNets\\Dactor\\Dactor.ckpt')
 
     def load(self):
         print('Restoring actor...')
-        res_path = self.saver.restore(self.sess, 'AdversarialNets/Dactor/Dactor.ckpt')
+        imported_meta = tf.train.import_meta_graph('.\\AdversarialNets\\Dactor\\Dactor.ckpt.meta')
+        imported_meta.restore(self.sess, tf.train.latest_checkpoint('.\\AdversarialNets\\Dactor\\'))
         print('Actor restored...')
 
 class defCriticNetwork(object):
@@ -254,11 +255,13 @@ class defCriticNetwork(object):
 
     def save(self):
         print('saving critic..')
-        save_path = self.saver.save(self.sess, 'AdversarialNets/Dcritic/Dcritic.ckpt')
+        save_path = self.saver.save(self.sess, '.\\AdversarialNets\\Dcritic\\Dcritic.ckpt')
 
     def load(self):
         print('Restoring critic...')
-        self.saver.restore(self.sess, 'AdversarialNets/Dcritic/Dcritic.ckpt')
+        imported_meta = tf.train.import_meta_graph('.\\AdversarialNets\\Dcritic\\Dcritic.ckpt.meta')
+        imported_meta.restore(self.sess, tf.train.latest_checkpoint('.\\AdversarialNets\\Dcritic\\'))
+
         print('Critic restored...')
 
 

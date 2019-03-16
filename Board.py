@@ -17,6 +17,7 @@ class Board:
         self.turn = ATC
         self.message = ""
         self.won = None
+        self.lastMoved = None
         if board == None:
             self.board = {}
         else:
@@ -132,7 +133,10 @@ class Board:
                 print(i, end="|")
             for j in range(0, self.dim):
                 item = self.board.get((i, j), " ")
-                print(str(item) + ' |', end=" ")
+                if item == self.lastMoved:
+                    print('\033[93m'+str(item)+'\033[0m' + ' |', end=" ")
+                else:
+                    print(str(item) + ' |', end=" ")
             print()
         print("-" * 30)
         print("------------ {} TO MOVE -----------".format(self.turn))
@@ -176,22 +180,27 @@ class Board:
         if direct:
             print('-------------- am pierdut regele ---------')
             return True
-        spaces = [
-            self.board.get((self.kx + 1, self.ky), None) or (self.kx + 1, self.ky),
-            self.board.get((self.kx, self.ky - 1), None) or (self.kx, self.ky - 1),
-            self.board.get((self.kx, self.ky + 1), None) or (self.kx, self.ky + 1),
-            self.board.get((self.kx - 1, self.ky), None) or (self.kx - 1, self.ky)
-        ]
+
         if (self.kx, self.ky) in [(0, 0), (0, self.dim-1), (self.dim-1, 0), (self.dim-1, self.dim-1)]:
             print('\033[93m-------------- Rege salvat ---------\033[0m')
             self.printBoard()
             self.won = DEF
             return True
 
-        if self.board.get((self.kx + 1, self.ky), None) == ATC and \
-                self.board.get((self.kx, self.ky - 1), None) == ATC and \
-                self.board.get((self.kx, self.ky + 1), None) == ATC and \
-                self.board.get((self.kx - 1, self.ky), None) == ATC:
+        spaces = [(self.kx + 1, self.ky), (self.kx, self.ky - 1), (self.kx, self.ky + 1), (self.kx - 1, self.ky)]
+        atcWon = True
+        for s in spaces:
+            ss = self.board.get(s, None)
+            if ss:
+                if ss.color == ATC:
+                    continue
+                elif ss.color == DEF:
+                    atcWon = False
+                    break
+            else:
+                atcWon = False
+                break
+        if atcWon:
             print("\033[93m------------ am pierdut regele -----------\033[0m")
             self.printBoard()
             self.won = ATC
@@ -243,16 +252,18 @@ class Board:
                 self.message = "you aren't allowed to move that piece this turn"
                 return self.gameOver(), self.boardMatrix, -2
             if target.isValid(fr, to, target.color, self.board):
+                self.lastMoved = target
                 self.message = "that is a valid move"
                 self.board[to] = self.board[fr]
                 self.board[to].pos = to
 
                 # mut regele
                 if target.color == KNG:
+                    r += 2
                     self.kx, self.ky = target.pos
                     if to[0] not in range(self.dim) and to[1] not in range(self.dim): # din centru
                         if target.pos[0] in range(self.dim) or target.pos[1] in range(self.dim): # pe margine
-                            r += 2
+                            r += 3
                 r += self.checkTakes(target)
                 tpos = target.pos
                 # mut langa rege
@@ -263,7 +274,7 @@ class Board:
                             vv = self.board.get(_, None)
                             if vv:
                                 if vv.color == KNG:
-                                    r += 2
+                                    r += 5
                 # print(self.boardCode)
                 del self.board[fr]
                 self.boardMatrix[fr[0]][fr[1]] = 0
@@ -336,4 +347,5 @@ if __name__ == '__main__':
             b.takeTurn(a[0], a[1])
             q.append(b.boardMatrix)
             p1, p2, fx2 = b.genFlips(q, q, (b.c2n[a[0]], b.c2n[a[1]]))
+            b.printBoard()
             #print(p1[-1], move_dict[np.argmax(fx2[0])], move_dict[np.argmax(fx2[1])], move_dict[np.argmax(fx2[2])])

@@ -15,22 +15,20 @@ from random import random
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 tf.logging.set_verbosity(tf.logging.ERROR)
 
-
-
-
 move_dict = pickle.load(open('moves7x7.pickle', 'rb'))
-
 atkBufferPath = './AdversarialNets/Buffers/atkBuffer.pickle'
 defBufferPath = './AdversarialNets/Buffers/defBuffer.pickle'
 
-criticLR = 0.005
-actorLR = 0.05
-criticTAU = 0.125
-actorTAU = 0.125
-GAMMA = 0.9
-BATCH_SIZE = 50
-minibatchSize = 50
+criticLR = 0.0005
+actorLR = 0.005
+criticTAU = 0.1
+actorTAU = 0.1
+GAMMA = 0.85
+BATCH_SIZE = 250
+minibatchSize = 250
 actiondim = 588
+illegalTh = 0.99
+
 
 
 def build_summaries():
@@ -46,7 +44,10 @@ def build_summaries():
 
 def train(sess, env, aactor, acritic, dactor, dcritic, actor_noise):
 
-
+    defWins = 0
+    atcWins = 0
+    episodeLen = 5000
+    
     # Set up summary Ops
     summary_ops, summary_vars = build_summaries()
     sess.run(tf.global_variables_initializer())
@@ -59,8 +60,8 @@ def train(sess, env, aactor, acritic, dactor, dcritic, actor_noise):
     dcritic.update_target_network()
 
     # Initialize replay memory
-    abuff = ReplayBuffer(500)
-    dbuff = ReplayBuffer(500)
+    abuff = ReplayBuffer(2500)
+    dbuff = ReplayBuffer(2500)
 
     if(os.path.isfile(defBufferPath)):
         print('Loading def buffer...')
@@ -83,11 +84,12 @@ def train(sess, env, aactor, acritic, dactor, dcritic, actor_noise):
         j = 0
         last_time = time.time()
         moves = 0
-        
-        aactor.save()
-        acritic.save()
-        dactor.save()
-        dcritic.save()
+
+        if i > 2:
+            aactor.save()
+            acritic.save()
+            dactor.save()
+            dcritic.save()
         
         if (os.path.isfile(defBufferPath)):
             abuff.save(atkBufferPath)
@@ -101,8 +103,10 @@ def train(sess, env, aactor, acritic, dactor, dcritic, actor_noise):
         mem = deque(maxlen=5)
         for _ in range(5):
             mem.append(s)
-            
+        
+        print(Aactor.network_params[1])
         while not b.gameOver():
+            #print(len(abuff.buffer))
             moves = b.moves
             mem2 = deque(maxlen=5)
             for _ in mem:
@@ -127,7 +131,7 @@ def train(sess, env, aactor, acritic, dactor, dcritic, actor_noise):
                         amovhist.append(move)
                         mem2.append(s2)
                     else:
-                        if random() > 0.985:
+                        if random() > illegalTh:
                             terminal, s2, r = b.takeTurn(moveFrom, moveTo, True)
                             amovhist.append(move)
                             mem2.append(s2)
@@ -135,7 +139,7 @@ def train(sess, env, aactor, acritic, dactor, dcritic, actor_noise):
                             j-=1
                             continue
                 else:
-                    if random() > 0.985:
+                    if random() > illegalTh:
                         terminal, s2, r = b.takeTurn(moveFrom, moveTo, True)
                         amovhist.append(move)
                         mem2.append(s2)
@@ -150,8 +154,6 @@ def train(sess, env, aactor, acritic, dactor, dcritic, actor_noise):
 
                 if iterations % 500 == 0 and iterations != 0:
                     print(move)
-                #if iterations % 250 == 0 and iterations != 0:
-                #    print(time() - last_time)
 
                 abuff.add(np.reshape(mem, (5, 7, 7)), np.reshape(a, (588)), r, terminal, np.reshape(mem2, (5, 7, 7)))
                 rot, rot2, fx = b.genFlips(mem, mem2, move)
@@ -200,9 +202,10 @@ def train(sess, env, aactor, acritic, dactor, dcritic, actor_noise):
                     lastboard = b
 
                     # reset
-                    if j == 2501 or terminal:
+                    if j >= episodeLen or terminal:
                         if b.won == b.turn:
                             r += 1000
+                            atcWins += 1
                         else:
                             r -= 1000
                         total_moves += moves
@@ -236,7 +239,7 @@ def train(sess, env, aactor, acritic, dactor, dcritic, actor_noise):
                         dmovhist.append(move)
                         mem2.append(s2)
                     else:
-                        if random() > 0.985:
+                        if random() > illegalTh:
                             terminal, s2, r = b.takeTurn(moveFrom, moveTo, True)
                             dmovhist.append(move)
                             mem2.append(s2)
@@ -244,7 +247,7 @@ def train(sess, env, aactor, acritic, dactor, dcritic, actor_noise):
                             j -= 1
                             continue
                 else:
-                    if random() > 0.985:
+                    if random() > illegalTh:
                         terminal, s2, r = b.takeTurn(moveFrom, moveTo, True)
                         dmovhist.append(move)
                         mem2.append(s2)
@@ -308,9 +311,10 @@ def train(sess, env, aactor, acritic, dactor, dcritic, actor_noise):
                     lastboard = b
 
                     # reset
-                    if j == 2501 or terminal:
+                    if j >= episodeLen or terminal:
                         if b.won == b.turn:
                             r += 1000
+                            defWins += 1
                         else:
                             r -= 1000
                         total_moves += moves
@@ -327,27 +331,28 @@ def train(sess, env, aactor, acritic, dactor, dcritic, actor_noise):
                                                                                                                   j + 1))))
                         break
         print('\033[92m' + 'Saving buffer \033[0m')
-        print('----- \033[92m EPISODE {}, TOTAL MOVES: {}, LAST EPISODE: {} TIME ELAPSED: {}\033[0m -----'.format(i + 1, total_moves,
-                                                                                                  moves, time.time() - last_time))
+        print('----- \033[92m EPISODE {}, TOTAL MOVES: {}, LAST EPISODE: {} TIME ELAPSED: {} ATC/DEF: {}|{}\033[0m -----'.format(i + 1, total_moves,
+                                                                                                  moves, time.time() - last_time, atcWins, defWins))
     return aactor, acritic, dactor, dcritic
 
-with tf.Session() as sess:
+
+with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
     aenv = Board()
     Aactor = atkActorNetwork(sess, [None, 5, 7, 7], actiondim, 1, actorLR, actorTAU, BATCH_SIZE)
     Acritic = atkCriticNetwork(sess, [None, 5, 7, 7], actiondim, criticLR, criticTAU, GAMMA, Aactor.get_num_trainable_vars())
     Dactor = defActorNetwork(sess, [None, 5, 7, 7], actiondim, 1, actorLR, actorTAU, BATCH_SIZE)
     Dcritic = defCriticNetwork(sess, [None, 5, 7, 7], actiondim, criticLR, criticTAU, GAMMA, Dactor.get_num_trainable_vars())
     aactor_noise = OrnsteinUhlenbeckActionNoise(mu=np.zeros(588))
-    if(os.path.isfile('./AdversarialNets/Aactor/Aactor.ckpt.index')):
+    if(os.path.isfile('.\\AdversarialNets\\Aactor\\Aactor.ckpt.meta')):
         Aactor.load()
-    if (os.path.isfile('./AdversarialNets/Acritic/Acritic.ckpt.index')):
+    if (os.path.isfile('.\\AdversarialNets\\Acritic\\Acritic.ckpt.meta')):
         Acritic.load()
-    if (os.path.isfile('./AdversarialNets/Dactor/Dactor.ckpt.index')):
+    if (os.path.isfile('.\\AdversarialNets\\Dactor\\Dactor.ckpt.meta')):
         Dactor.load()
-    if (os.path.isfile('./AdversarialNets/Dcritic/Dcritic.ckpt.index')):
+    if (os.path.isfile('.\\AdversarialNets\\Dcritic\\Dcritic.ckpt.meta')):
         Dcritic.load()
     aactor_noise = OrnsteinUhlenbeckActionNoise(mu = np.zeros(588))
-    asses = tf.Session()
+
     Aactor, Acritic, Dactor, Dcritic = train(sess, aenv, Aactor, Acritic, Dactor, Dcritic, aactor_noise)
 
 
